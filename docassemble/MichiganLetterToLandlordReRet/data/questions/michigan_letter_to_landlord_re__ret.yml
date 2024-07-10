@@ -68,7 +68,7 @@ code: |
       key='intro',
       persistent=True,
       data={
-          "snap_time": str(current_datetime().format_datetime()),
+          "start_time": str(current_datetime().format_datetime()),
       },
   )
 
@@ -133,7 +133,6 @@ code: |
     data={
       "zip": forwarding_address.zip,
       "number_of_forms": len(al_recipient_bundle.enabled_documents()),
-      "snap_time": str(current_datetime().format_datetime()),
     },
   )
   download_page
