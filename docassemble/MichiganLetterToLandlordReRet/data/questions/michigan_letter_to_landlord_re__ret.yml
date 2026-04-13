@@ -55,8 +55,8 @@ objects:
   - rental_address: ALAddress
   - notification_address: ALAddress
   - other_parties: ALPeopleList.using(ask_number=True,target_number=1)
-  - users: ALPeopleList.using(there_are_any=True, complete_attribute=['name.first','phone_number'])
-
+  - users: ALPeopleList.using(there_are_any=True,ask_number=True,target_number=1, complete_attribute=['name.first','phone_number'])
+  - exhibit_attachment: ALExhibitDocument.using(title="Exhibits to Landlord Letter", filename="Exhibits to Landlord Letter", include_exhibit_cover_pages=False, add_page_numbers=True, maximum_size=25000000)
 ---
 features:
   progress bar: True
@@ -79,21 +79,11 @@ code: |
   user_role = "plaintiff"
   user_ask_role = "plaintiff"
 
-  # Brought these 5 over from framework since we don't want to ask pii on this
-  MLH_intro_landing
-  MLH_agree_terms
-  MLH_intro_navigate_save
-  MLH_intro_time
   intro_what_you_need
   nav.set_section("section_tenant")
 
   vacation_date
-  if (vacation_date + timedelta(days=30) > today()):
-    thirty_days_not_passed
-
   notification_date
-  if vacation_date + timedelta(days=4) < notification_date:
-    late_forwarding_kickout
 
   if any_deposit_returned:
     deposit_amount_returned
@@ -120,12 +110,13 @@ code: |
     other_parties[0].email
   other_parties[0].phone_number
 
+  if exhibit_attachment.exhibits.has_exhibits:
+    exhibit_attachment.exhibits.gather()
+
   nav.set_section("section_done")
-  interview_order_letter_to_landlord_security = True
-  MLH_outro_saving_answers
-  if (vacation_date + timedelta(days=30) > today()):
-    letter_date_notification
-  MLH_outro_download_forms
+  al_user_bundle.generate_downloads_task
+  if not al_user_bundle.generate_downloads_task.ready():
+    al_download_waiting_screen
   snapshot_download
   MLH_download
 
@@ -184,7 +175,7 @@ continue button field: MLH_intro_time
 id: intro what you need
 continue button field: intro_what_you_need
 question: |
-  Getting ready
+  Letter to Landlord: Security Deposit
 subquestion: |
   You will need this information to complete the tool: 
   
@@ -742,7 +733,32 @@ review:
 
           ${ item.address.on_one_line() }
       % endfor
+  - Edit:
+      - exhibit_attachment.exhibits.has_exhibits
+    button: |
+      **Do you have documents you want the judge to see?**:
 
+      % if exhibit_attachment.exhibits.has_exhibits:
+      Yes
+      % elif not exhibit_attachment.exhibits.has_exhibits:
+      No
+      % endif
+  - Edit:
+      - exhibit_attachment.exhibits.revisit
+      - recompute:
+        - exhibit_attachment.table_of_contents
+    button: |
+      **Uploaded Documents**
+
+      % if exhibit_attachment.exhibits.number_gathered() > 0:
+      ${ collapse_template(exhibit_attachment.exhibits.in_progress_exhibits) }
+      % else:
+      You have not uploaded any documents yet.
+      % endif
+    css class: bg-secondary-subtle
+    show if: exhibit_attachment.exhibits.has_exhibits
+validation code: |
+  undefine('al_user_bundle._downloadable_files', 'al_user_bundle.generate_downloads_task')
 ---
 continue button field: users.revisit
 question: |
@@ -808,7 +824,7 @@ objects:
 ---
 # Bundles group the ALDocuments into separate downloads, such as for court and for the user
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter_to_landlord_security_attachment], filename="letter_to_landlord_security", title="All forms and instructions", enabled=True)
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter_to_landlord_security_attachment, exhibit_attachment], filename="letter_to_landlord_security", title="All forms and instructions", enabled=True)
   - al_recipient_bundle: ALDocumentBundle.using(elements=[letter_to_landlord_security_attachment],  filename="letter_to_landlord_security", title="All forms to file", enabled=True)
 
 ---
@@ -830,3 +846,240 @@ attachment:
   variable name: letter_to_landlord_security_attachment[i]
   docx template file: letter_to_landlord_security.docx
   skip undefined: False
+---
+###############################################################################################
+################  stuff for sandbox version   #################################################
+###############################################################################################
+---
+#directly copied from framework, but adding code for previously cached files for background assembly. May be OK to have this code in Framework version (may just do nothing if there are no cached files).
+id: DownloadScreen
+event: MLH_download
+question: |
+  Get your ${ MLH_form_type }
+subquestion: |
+  You can **view**, **download**, or **e-mail** your ${ MLH_form_type } to yourself below. Tap the "✎ Review / Edit" button to fix any mistakes.
+
+  ${ optional_download_message }
+    
+  <h2 class="h3">Download or e-mail your ${ MLH_form_type }</h2>
+
+  ${ action_button_html(url_action('review_full'), label='✎ Review / Edit', color='info') }
+  
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True) }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+  
+  <h2 class="h3">Take our quick survey!</h2>
+  Answer below or [open the survey in a new tab](${ survey_link_url_only }).
+  ${ survey_embed_script }
+progress: 100
+---
+# overriding version from ql_baseline
+generic object: ALExhibitList
+id: any exhibits
+question: |
+  Attach any documents or photos you want the judge to see.
+subquestion: |
+  If you have any documents you want to show the judge, attach them now. This could include things like:
+
+  * Police reports
+  * Medical records
+  * Photos
+  * Copies of e-mails or text messages
+  * Letters
+
+  ${ collapse_template(no_documents) }
+  ${ collapse_template(paper_documents) }
+  ${ collapse_template(audiovisual_evidence) }
+fields:
+  - Do you have any documents you want to upload?: x.has_exhibits
+    datatype: yesnoradio
+  - note: |
+      **Okay**. You can upload multiple documents. Please upload documents in order starting with the oldest one first. 
+
+      ${ collapse_template(preferred_file_types) }
+    show if: x.has_exhibits
+  - First document title: x[0].title
+    maxlength: 60 # longer might break TOC
+    show if: x.has_exhibits
+  - Upload the first document: x[0].pages
+    show if: x.has_exhibits
+    datatype: files
+    maximum image size: 2048
+    image upload type: jpeg
+    accept: |
+      "image/png, image/jpeg, .doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,.pdf"
+validation code: |
+  if x.has_exhibits:
+    full_size = sum(a_page.size_in_bytes() for a_page in x[0].pages)
+    if full_size > (15 * 1024 * 1024):
+      validation_error("Upload a file smaller than 15 MB.")
+    if hasattr(x, 'maximum_size'):
+      if full_size > x.maximum_size:
+        validation_error(f"Upload a file smaller than {humanize.naturalsize(x.maximum_size)}")
+    try:
+      pdf_concatenate(x[0].pages)
+    except:
+      validation_error("Unable to convert this file. Please upload a new one.")
+    x[0].pages.complete_attribute = 'ok'
+#    x[0].pages.reset_gathered()  # docassemble sets this attribute but AL has this code forcing gathering of additional pages. MLH does not want to force gathering additional pages
+---
+# overriding version from ql_baseline
+generic object: ALExhibitList
+id: another exhibit
+question: |
+  You have ${ x.number_gathered() } document(s) so far. Do you want to upload another document?
+subquestion: |
+  % if hasattr(x, 'maximum_size'):
+  The total size of all exhibits must be less than ${ humanize.naturalsize(x.maximum_size) }.
+  You can upload ${ humanize.naturalsize(x.maximum_size - x.size_in_bytes())} more.
+  % endif
+
+  ${ collapse_template(x.in_progress_exhibits) }
+fields: 
+  - Upload another document?: x.there_is_another
+    datatype: radio
+    choices:
+      - Yes, I want to add another.: True
+      - No, I'm done adding documents.: False
+    label above field: True
+---
+# overriding version from ql_baseline (changed text and max image size, added max size info to subQ, and got rid of code that triggers additional page gathering)
+generic object: ALExhibitList
+id: exhibit i
+question: |
+  Upload the ${ ordinal(i) } document
+subquestion: |
+  % if hasattr(x, 'maximum_size'):
+  The total size of all exhibits must be less than ${ humanize.naturalsize(x.maximum_size) }.
+  You can upload ${ humanize.naturalsize(x.maximum_size - x.size_in_bytes())} more.
+  % endif
+
+  ${ collapse_template(preferred_file_types) }
+fields:
+  - Document title: x[i].title
+    maxlength: 60 # longer might break TOC
+  - Upload the exhibit: x[i].pages
+    datatype: files
+    maximum image size: 2048
+    image upload type: jpeg
+    accept: |
+      "image/png, image/jpeg, .doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,.pdf"   
+validation code: |
+  this_doc_size = sum(a_page.size_in_bytes() for a_page in x[i].pages)
+  if this_doc_size > (15 * 1024 * 1024):
+    validation_error("Upload a file smaller than 15 MB.")
+  if hasattr(x, 'maximum_size'):
+    full_size = x.size_in_bytes()
+    if full_size > x.maximum_size:
+      suggested_size = x.maximum_size - (full_size - this_doc_size)
+      validation_error(f"All exhibits combined must be smaller than {humanize.naturalsize(x.maximum_size)}. Upload a file smaller than {humanize.naturalsize(suggested_size)}.")
+  try:
+    pdf_concatenate(x[i].pages)
+  except:
+    validation_error("Unable to convert this file. Please upload a new one.")
+#  x[i].pages.reset_gathered()  # docassemble sets this attribute but AL has this code to force gathering additional pages. MLH does not want to force gathering additional pages.
+---
+template: audiovisual_evidence
+subject: |
+  What if I have **audio or video** evidence?
+content: |
+  Save any audio or video evidence you have. If there will be a hearing for your case, you can submit the audio or video evidence to the court directly.
+---
+template: no_documents
+subject: |
+  What if **don't** have any documents to attach?
+content: |
+  Even if you don't have any documents to attach, you can still file your petition. The judge shouldn't deny a petition just because you don't have any documents to attach.
+---
+template: paper_documents
+subject: |
+  How do I upload a **paper document**?
+content: |
+  Scan paper documents using a **scanner app** on your phone or a **physical scanner** to create clean PDF copies. 
+
+  Examples of free scanner apps are Adobe Scan, Google Drive, or Apple Notes. (We do not recommend any specific software. You can create PDFs in other ways as well.) Some libraries also have scanners.
+---
+template: preferred_file_types
+subject: |
+  File type tips
+content: |
+  If possible, upload documents as PDFs to help avoid issues. In many cases, "save", "print", "download", or "share" options include a way to create a PDF. To learn more, read [Working with PDF Files](https://michiganlegalhelp.org/resources/mifile/working-pdf-files). 
+
+  Scan paper documents with a scanner app or a physical scanner to create clean PDF copies.
+
+  It's OK to upload photos or screenshots from phones.
+
+  Accepted file types: PDF, JPG, PNG, and word-processing files such as DOCX.
+---
+attachments:
+  variable name: exhibit_attachment.table_of_contents
+  docx template file: exhibit_attachment_table_of_contents.docx
+  field code:
+    exhibits: raw(exhibit_attachment.exhibits)
+    include_exhibit_cover_pages: raw(exhibit_attachment.include_exhibit_cover_pages)
+---
+if: len(exhibit_attachment.exhibits) > 1
+generic object: ALExhibitList
+table: exhibit_attachment.exhibits.add_delete_exhibits_table
+rows: exhibit_attachment.exhibits
+allow reordering: True
+delete buttons: True
+columns:
+  - ${ al_exhibit_title_label }: |
+      row_item.title
+  - ${ al_exhibit_preview_label }: |
+      row_item.pages.show(width="50%")
+  - ${ al_exhibit_total_pages_label }: |
+      row_item.pages.num_pages()
+---
+if: len(exhibit_attachment.exhibits) == 1
+generic object: ALExhibitList
+table: exhibit_attachment.exhibits.add_delete_exhibits_table
+rows: exhibit_attachment.exhibits
+allow reordering: True
+delete buttons: False
+columns:
+  - ${ al_exhibit_title_label }: |
+      row_item.title
+  - ${ al_exhibit_preview_label }: |
+      row_item.pages.show(width="50%")
+  - ${ al_exhibit_total_pages_label }: |
+      row_item.pages.num_pages()
+---
+generic object: ALExhibitList
+table: exhibit_attachment.exhibits.rearrange_exhibits_table
+rows: exhibit_attachment.exhibits
+allow reordering: True
+columns:
+  - ${ al_exhibit_title_label }: |
+      row_item.title
+  - ${ al_exhibit_preview_label }: |
+      row_item.pages.show(width="50%")
+  - ${ al_exhibit_total_pages_label }: |
+      row_item.pages.num_pages()
+---
+generic object: ALExhibitList
+template: exhibit_attachment.exhibits.in_progress_exhibits
+subject: |
+  View your uploaded documents
+content: |
+  ${ exhibit_attachment.exhibits.rearrange_exhibits_table }
+---
+generic object: ALExhibitList
+template: exhibit_attachment.exhibits.add_delete_exhibits
+subject: |
+  View your uploaded documents
+content: |
+  ${ exhibit_attachment.exhibits.add_delete_exhibits_table }
+---
+continue button field: |-
+  exhibit_attachment.exhibits.revisit
+id: |-
+  revisit exhibits
+question: |-
+  Edit uploaded docs
+subquestion: |-
+  ${ exhibit_attachment.exhibits.add_delete_exhibits }
+
+  ${ exhibit_attachment.exhibits.add_action() }
