@@ -118,6 +118,20 @@ code: |
   if not al_user_bundle.generate_downloads_task.ready():
     al_download_waiting_screen
   snapshot_download
+  ETC_review_docs_screen
+  clerk_email_prep
+  if clerk_email_sent_ok:
+    snapshot_ETC
+    email_status_sent
+    if not al_user_bundle.generate_downloads_task.ready():
+      al_download_waiting_screen
+    ETC_success
+  else:
+    snapshot_ETC
+    email_status_failed
+    if not al_user_bundle.generate_downloads_task.ready():
+      al_download_waiting_screen
+    ETC_error
   MLH_download
 
 # # # # # # # # # # # # # # End Interview Order # # # # # # # # # # # # # # # #
@@ -1083,3 +1097,224 @@ subquestion: |-
   ${ exhibit_attachment.exhibits.add_delete_exhibits }
 
   ${ exhibit_attachment.exhibits.add_action() }
+---
+id: ETC review and download docs DownloadScreen
+continue button field: ETC_review_docs_screen
+progress: 99
+continue button label: "I want to file now by e-mail"
+question: |
+  Review your forms
+subquestion: |
+  <h2 class="h3">Review and Finalize Your Forms </h2>
+
+  Your forms are ready. View or download your forms below. Tap **✎ Review / Edit** to fix any mistakes.
+
+  ${ action_button_html(url_ask([{'undefine': ['al_user_bundle._downloadable_files', 'al_user_bundle.generate_downloads_task']}, 'review_full']), label='✎ Review / Edit', color='info', size="md") }
+
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+
+  ${ collapse_template(email_to_self_option) }
+
+  <h2 class="h3">Ready to file?</h2>
+  Tap the button below when you're ready to e-mail your forms to the court. 
+
+  If you prefer to file in a different way, read the **Instructions** to learn about your options.
+
+  ${ collapse_template(wait_to_file_help) }
+under: |
+  It may **take a few minutes** to get to the next screen. You do not need to refresh.
+  
+  ${ sign_in_message }
+---
+template: email_to_self_option
+subject: |
+  Want to email these forms to yourself or someone you trust?
+content: |
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  This does **not** file your forms with the court. This is to send a copy to yourself or someone you trust. To file with the court, tap the **I want to file now by e-mail** button below.
+---
+template: wait_to_file_help
+subject: |
+  What if I'm not ready to file yet?
+content: |
+  % if not user_logged_in():
+  **Important:** To save your forms here for later, you must **sign in or sign up** now using the menu at the top right of the page or the link below. 
+
+  % else:
+  You can log back in later to:
+
+  * update your forms,
+  * download your forms, or
+  * email your forms to the court with the button below.
+
+  Your forms will be **saved here for 180 days**. To restart the 180 day clock and keep your forms here for longer:
+
+  * come back to [forms.michiganlegalhelp.org](forms.michiganlegalhelp.org),
+  * sign in, and
+  * open this form by selecting it on the My Forms page. 
+
+  Opening this form again restarts the 60 days.
+  % endif
+---
+id: email to clerk details
+continue button field: clerk_email_prep
+continue button label: |
+  :file-export: E-sign and Submit
+question: |
+  Submit your forms to the court
+subquestion: |
+  % if not defined('contact_email'):
+  Enter an e-mail address that you check often and do not share with anyone else. When you send your forms to the court, a copy will go to this e-mail address. Court staff may also e-mail you at this address.
+  % endif
+fields:
+  - Contact e-mail address:: contact_email
+    datatype: email
+  - Notes for the court clerk (optional):: notes_to_clerk
+    input type: area
+    rows: 3
+    maxlength: 200
+    required: False
+  - note: |
+      Because these forms will be e-mailed directly to the court, **e-signatures are required**. This tool will add "**/s/ ${ users[0] }**" as your e-signature on the forms. Continue only if you agree to e-sign.
+under: |
+  % if signatures_complete:
+  Tap **Submit** to send your forms to the court now. It may **take a few minutes** to get to the confirmation screen. You do not need to refresh.
+  % else:
+  Tap **E-sign and Submit** to send your forms to the court now. It may **take a few minutes** to get to the confirmation screen. You do not need to refresh.
+  % endif
+
+  ${ sign_in_message }
+---
+only sets: clerk_email_sent_ok
+code: |
+  recipient = "ekressmiller@mplp.org"
+  clerk_email_sent_ok = al_court_bundle.send_email(to=recipient, cc=contact_email, template=clerk_email) 
+  if clerk_email_sent_ok:
+    prevent_going_back()
+---
+template: clerk_email
+subject: |
+  PPO Petition by ${ users[0] }
+content: |
+  ${ users[0] } is filing a PPO petition via MLH-Forms.
+
+  Petitioner contact information: ${ contact_email }
+
+  **Optional note from sender:** ${ notes_to_clerk }
+---
+id: email confirmation ETCSent1
+continue button field: email_status_sent
+prevent going back: True
+question: |
+  Your forms were e-mailed to the court!
+subquestion: |
+  Your forms **were e-mailed** to the Circuit Court. 
+
+  **Important:** Read the **Instructions** document for what to do next. 
+
+  Changes made to answers in this program **will not** appear on the court's copy of your forms unless you resubmit them to the court.
+
+  To get a copy of your forms or instructions, or if you need to resubmit your forms to the court, tap **${MLH_continue_button_label}**. 
+under: |
+  It may **take a few minutes** to get to the next screen. You do not need to refresh.
+
+  ${ sign_in_message }
+---
+id: email not sent ETCFailed1
+continue button field: email_status_failed
+question: |
+  Email Error
+subquestion: |
+  There was an error with our email system. **Your forms were NOT sent to the court.**
+
+  Tap **${ MLH_back_button_label }** to return to the Submit page and try again. 
+
+  Or tap "Continue" to download your forms.
+under: |
+  It may **take a few minutes** to get to the next screen. You do not need to refresh.
+
+  ${ sign_in_message }
+---
+id: email to court success screen ETCSent2
+progress: 100
+prevent going back: True
+event: ETC_success
+question: |
+  Your forms were e-mailed to the court!
+subquestion: |
+  Your forms **were e-mailed** to the Circuit Court. 
+
+  You can download your forms or email them to yourself. Any edits you make now will **not** be on the court's copy unless you resubmit your forms to the court.
+
+  <h2 class="h3">Download, e-mail, or resubmit your ${ MLH_form_type }</h2>
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  ${ collapse_template(resubmit_option) } 
+
+  <h2 class="h3">Take our quick survey!</h2>
+  Answer below or [open the survey in a new tab](${ survey_link_url_only }).
+  ${ survey_embed_script }
+---
+template: resubmit_option
+subject: |
+  Need to **resubmit** your forms?
+content: |
+  You should only use the **Resubmit** button if court staff told you to resubmit your forms. 
+  
+  If you need to make edits, tap "✎ Review / Edit" **before** you resubmit. 
+
+  ${ action_button_html(url_action('resubmit_ETC'),
+                        label=':file-export: Resubmit forms now',
+                        size='md',
+                        color='warning') }
+  
+  You (${ contact_email }) and the court will both get an e-mail with the resubmitted forms. It may **take a few minutes** to get the e-mail.
+---
+event: resubmit_ETC
+code: |
+  signature_date = today()
+  
+  resubmit_success = al_court_bundle.send_email(to=recipient, cc=contact_email, template=resubmit_clerk_email) 
+  if resubmit_success:
+    # Exact phrase below is in Docassemble's words dictionary
+    log(word('E-mail was sent to') + ' ' + recipient ,'success')
+  else:
+    # E-mail failed is not in the default Docassemble words dictionary
+    log(word('E-mail failed'), 'error')
+---
+template: resubmit_clerk_email
+subject: |
+  Resubmitted PPO Petition by ${ users[0] }
+content: |
+  ${ users[0] } is **resubmitting** a PPO petition via MLH-Forms.
+
+  Petitioner contact information: ${ contact_email }
+---
+id: email to court error screen ETCFailed2
+event: ETC_error
+question: |
+  E-mail error!
+subquestion: |
+  **Your forms were NOT sent to the court.**
+
+  Tap **${ MLH_back_button_label }** to try again. You can also download your forms below. 
+
+  <h2 class="h3">Download or e-mail your ${ MLH_form_type }</h2>
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  <h2 class="h3">Take our quick survey!</h2>
+  Answer below or [open the survey in a new tab](${ survey_link_url_only }).
+  ${ survey_embed_script }
+---
+generic object: ALDocumentBundle
+template: x.send_email_template
+subject: |
+  Your Personal Protection Order petition documents are ready
+content: |
+  The documents you'll need to ask the court for a Personal Protection Order are attached.
+---
