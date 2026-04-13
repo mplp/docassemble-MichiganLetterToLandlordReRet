@@ -121,13 +121,11 @@ code: |
   ETC_review_docs_screen
   clerk_email_prep
   if clerk_email_sent_ok:
-    snapshot_ETC
     email_status_sent
     if not al_user_bundle.generate_downloads_task.ready():
       al_download_waiting_screen
     ETC_success
   else:
-    snapshot_ETC
     email_status_failed
     if not al_user_bundle.generate_downloads_task.ready():
       al_download_waiting_screen
@@ -1121,10 +1119,6 @@ subquestion: |
   If you prefer to file in a different way, read the **Instructions** to learn about your options.
 
   ${ collapse_template(wait_to_file_help) }
-under: |
-  It may **take a few minutes** to get to the next screen. You do not need to refresh.
-  
-  ${ sign_in_message }
 ---
 template: email_to_self_option
 subject: |
@@ -1178,11 +1172,7 @@ fields:
   - note: |
       Because these forms will be e-mailed directly to the court, **e-signatures are required**. This tool will add "**/s/ ${ users[0] }**" as your e-signature on the forms. Continue only if you agree to e-sign.
 under: |
-  % if signatures_complete:
-  Tap **Submit** to send your forms to the court now. It may **take a few minutes** to get to the confirmation screen. You do not need to refresh.
-  % else:
-  Tap **E-sign and Submit** to send your forms to the court now. It may **take a few minutes** to get to the confirmation screen. You do not need to refresh.
-  % endif
+  Tap **E-sign and Submit** to send your forms to the court now. 
 
   ${ sign_in_message }
 ---
@@ -1216,10 +1206,6 @@ subquestion: |
   Changes made to answers in this program **will not** appear on the court's copy of your forms unless you resubmit them to the court.
 
   To get a copy of your forms or instructions, or if you need to resubmit your forms to the court, tap **${MLH_continue_button_label}**. 
-under: |
-  It may **take a few minutes** to get to the next screen. You do not need to refresh.
-
-  ${ sign_in_message }
 ---
 id: email not sent ETCFailed1
 continue button field: email_status_failed
@@ -1248,7 +1234,7 @@ subquestion: |
   You can download your forms or email them to yourself. Any edits you make now will **not** be on the court's copy unless you resubmit your forms to the court.
 
   <h2 class="h3">Download, e-mail, or resubmit your ${ MLH_form_type }</h2>
-  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True) }
 
   ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
 
@@ -1303,7 +1289,7 @@ subquestion: |
   Tap **${ MLH_back_button_label }** to try again. You can also download your forms below. 
 
   <h2 class="h3">Download or e-mail your ${ MLH_form_type }</h2>
-  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True) }
 
   ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
 
