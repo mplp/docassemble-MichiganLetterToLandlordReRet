@@ -52,7 +52,7 @@ objects:
   - rental_address: ALAddress
   - notification_address: ALAddress
   - other_parties: ALPeopleList.using(ask_number=True,target_number=1)
-  - users: ALPeopleList.using(there_are_any=True,ask_number=True,target_number=1, complete_attribute=['name.first','phone_number'])
+  - users: ALPeopleList.using(there_are_any=True,ask_number=True,target_number=1, complete_attribute=['name.first'])
   - exhibit_attachment: ALExhibitDocument.using(title="Exhibits to Landlord Letter", filename="Exhibits to Landlord Letter", include_exhibit_cover_pages=False, add_page_numbers=True, maximum_size=25000000)
 ---
 features:
@@ -84,32 +84,7 @@ code: |
   vacation_date
   season_preferred
   
-  notification_date
-
-  if any_deposit_returned:
-    deposit_amount_returned
-  deposit_amount
-  if list_of_damages:
-    deposit_returned_kickout
   users.gather()
-  users[0].phone_number
-  set_parts(subtitle=str(users))
-  forwarding_address.address
-
-  nav.set_section("section_rental")
-  rental_address.address
-  type_of_delivery
-  if type_of_delivery == 'provided':
-    type_of_delivery_other
-
-  nav.set_section("section_landlord")
-  other_parties.gather()
-  other_parties[0].address.address
-  if type_of_delivery == 'mailed':
-    notification_address_same
-  elif type_of_delivery == 'e-mailed':
-    other_parties[0].email
-  other_parties[0].phone_number
 
   if exhibit_attachment.exhibits.has_exhibits:
     exhibit_attachment.exhibits.gather()
@@ -139,8 +114,8 @@ code: |
 
 ---
 code: |
-  stuff_to_snapshot['zip'] = forwarding_address.zip
-  stuff_to_snapshot['number_of_forms'] = len(al_recipient_bundle.enabled_documents())
+  stuff_to_snapshot['zip'] = ""
+  stuff_to_snapshot['number_of_forms'] = len(al_court_bundle.enabled_documents())
   stuff_to_snapshot['end_time'] = str(current_datetime().format_datetime(format='yyyy-MM-dd h:mm a'))
   if snapshot_dv_question == True:
     stuff_to_snapshot['dv_present'] = showifdef('snapshot_dv_present')
@@ -289,42 +264,6 @@ fields:
     datatype: yesnoradio
 
 ---
-id: phone number
-question: |
-  What is your phone number?
-subquestion: |
-  It is important that your landlord have another way of reaching out to you other than 
-  sending mail to your forwarding address. 
-fields:  
-  - Phone: users[0].phone_number
-    show if:
-      variable: users[0].no_phone_number
-      is: False
-  - I do not have a phone number: users[0].no_phone_number
-    required: False
-    datatype: yesno
-
----
-template: phone_info_template
-subject: |
-  Why do I need to give my phone number?
-content: |
-  It is important that your landlord have another way of reaching out to you other than sending mail to your forwarding address. 
-
-# These code blocks are copied over from framework. Without these here, the interview
-# gets stuck on the above question asking for the user's phone number. So, it feels like
-# a bit of a hack, but it works... bharrison
-# * * * BEGIN from framework
----
-generic object: ALIndividual
-code: |
-  if x.no_phone_number:
-    x.phone_number = "Does not have phone"
----
-code: |
-  if users[0].no_phone_number:
-    users[0].phone_number = "Does not have phone"
-# * * * END from framework
 
 ---
 code: |
@@ -405,9 +344,9 @@ fields:
 id: When did you vacate the property
 progress: 25
 question: |
-  Please enter March 12, 2026
+  Date
 fields:
-  - "Special date": vacation_date
+  - "Please enter March 12, 2026": vacation_date
     datatype: date
 
 ---
@@ -629,7 +568,7 @@ question: |
 subquestion: |
   Here is a preview of the form you will sign on the next page.   
   
-  ${ al_recipient_bundle.as_pdf(key='preview') }
+  ${ al_court_bundle.as_pdf(key='preview') }
 
   Click the image to open it in a new tab. Click the **Edit answers** button
   to edit your answers.
@@ -675,12 +614,16 @@ question: |
 subquestion: |
   Click the **Edit** button in any section to make changes. Click the blue **Resume** button at the bottom if you are done.
 review:
+
+  - edit: flavor_choices
+    button: |
+      **Dessert flavors you like:** ${ flavor_choices.true_values() if flavor_choices.any_true() else word("none of these")}
   - Edit: users.revisit
     button: |
-      **Tenants**
+      **About you**
 
       % for item in users:
-        * ${ item }
+      ${ item }
       % endfor
   - Edit: forwarding_address.address
     button: |
@@ -694,12 +637,15 @@ review:
       ${ rental_address }
   - Edit: vacation_date
     button: |
-      **Move-out Date**:
+      **Date you entered:**
       ${ vacation_date }
-  - Edit: notification_date
+  - Edit: season_preferred
     button: |
-      **Date of Notification**:
-      ${ notification_date }
+      **Your preferred season:**
+      ${ season_preferred }
+
+      **Reason:**
+      ${ season_explain }
   - Edit:
     - type_of_delivery
     - recompute:
@@ -798,12 +744,8 @@ rows: users
 columns:
   - Name: |
       row_item.name.full() if defined("row_item.name.first") else ""
-  - Phone number: |
-      phone_number_formatted(row_item.phone_number) if defined ("row_item.no_phone_number") and not row_item.no_phone_number and defined("row_item.phone_number") else "None"
 edit:
   - name.first
-  - phone_number
-  - no_phone_number
 confirm: True
 
 ---
@@ -850,7 +792,7 @@ objects:
 # Bundles group the ALDocuments into separate downloads, such as for court and for the user
 objects:
   - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter_to_landlord_security_attachment, exhibit_attachment], filename="letter_to_landlord_security", title="All forms and instructions", enabled=True)
-  - al_recipient_bundle: ALDocumentBundle.using(elements=[letter_to_landlord_security_attachment],  filename="letter_to_landlord_security", title="All forms to file", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[letter_to_landlord_security_attachment, exhibit_attachment],  filename="letter_to_landlord_security", title="All forms to file", enabled=True)
 
 ---
 # Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same
@@ -869,8 +811,8 @@ attachment:
   name: letter to landlord
   filename: letter_to_landlord_security
   variable name: letter_to_landlord_security_attachment[i]
-  docx template file: letter_to_landlord_security.docx
-  skip undefined: False
+  docx template file: silly_template.docx
+  skip undefined: True
 ---
 ###############################################################################################
 ################  stuff for sandbox version   #################################################
@@ -1122,7 +1064,7 @@ subquestion: |
 
   ${ action_button_html(url_ask([{'undefine': ['al_user_bundle._downloadable_files', 'al_user_bundle.generate_downloads_task']}, 'review_full']), label='✎ Review / Edit', color='info', size="md") }
 
-  ${ al_user_bundle.download_list_html(use_previously_cached_files=True, include_full_pdf=True) }
+  ${ al_user_bundle.download_list_html(use_previously_cached_files=True) }
 
   ${ collapse_template(email_to_self_option) }
 
@@ -1198,9 +1140,9 @@ code: |
 ---
 template: clerk_email
 subject: |
-  PPO Petition by ${ users[0] }
+  Filing by ${ users[0] }
 content: |
-  ${ users[0] } is filing a PPO petition via MLH-Forms.
+  ${ users[0] } is filing something via MLH-Forms.
 
   Petitioner contact information: ${ contact_email }
 
@@ -1286,9 +1228,9 @@ code: |
 ---
 template: resubmit_clerk_email
 subject: |
-  Resubmitted PPO Petition by ${ users[0] }
+  Resubmitted Filing by ${ users[0] }
 content: |
-  ${ users[0] } is **resubmitting** a PPO petition via MLH-Forms.
+  ${ users[0] } is **resubmitting** something via MLH-Forms.
 
   Petitioner contact information: ${ contact_email }
 ---
@@ -1313,9 +1255,9 @@ subquestion: |
 generic object: ALDocumentBundle
 template: x.send_email_template
 subject: |
-  Your Personal Protection Order petition documents are ready
+  Your documents are ready
 content: |
-  The documents you'll need to ask the court for a Personal Protection Order are attached.
+  Your test documents are attached.
 ---
 id: Dessert flavors
 question: |
