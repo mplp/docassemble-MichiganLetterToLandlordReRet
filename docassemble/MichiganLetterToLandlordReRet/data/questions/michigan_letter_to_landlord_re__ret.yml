@@ -8,11 +8,8 @@ modules:
 # docassemble-level metadata
 # See https://docassemble.org/docs/initial.html
 metadata:
-  title: Do-It-Yourself Letter to Landlord - Security Deposit
-  short title: Security Deposit Letter
-  subtitle: Helps you write a letter to your former landlord to get your security deposit back.
-  description: |
-    This tool helps someone in Michigan write a letter to a landlord to get their security deposit returned to them.
+  title: Test Interview
+  short title: Test Interview
   typical role: "plaintiff"
   help_page_title: Security Deposit Help for Tenants
   help_page_url: https://michiganlegalhelp.org/resources/housing/security-deposit-help-tenants
@@ -82,7 +79,11 @@ code: |
   intro_what_you_need
   nav.set_section("section_tenant")
 
+  flavor_choices
+  
   vacation_date
+  season_preferred
+  
   notification_date
 
   if any_deposit_returned:
@@ -187,17 +188,14 @@ continue button field: MLH_intro_time
 id: intro what you need
 continue button field: intro_what_you_need
 question: |
-  Letter to Landlord: Security Deposit
+  Example instructions
 subquestion: |
-  You will need this information to complete the tool: 
-  
-  * Your **contact** information (forwarding address, phone number, e-mail etc.);
-  * If **your roommates or co-tenants** are signing this letter with you, you should have their **contact** information ready (name, address, phone number);
-  * Your **landlord**'s name and **contact** information (name, address, phone number);
-  * The **rental** address you moved out from; **and**
-  * The **amount** of the deposit.
-
-  You should be able to find all of this information on your lease agreement.
+  1. Read each question. You may notice different question types like:
+      * fill-in
+      * multiple choice
+      * checkboxes
+  2. Answer the question as best you can.
+  3. Move on to the next question.
 ---
 id: thirty days not passed
 continue button field: thirty_days_not_passed
@@ -229,10 +227,27 @@ subquestion: |
   
 ---
 id: any deposit returned
-question: Did your landlord give you any of your security deposit back?
+question: Seasons
 fields:
-  - no label: any_deposit_returned
-    datatype: yesnoradio
+  - If you had to pick, which season do you prefer?: season_preferred
+    input type: radio
+    choices:
+      - Spring: spring
+      - Summer: summer
+      - Fall: fall
+      - Winter: winter
+  - Why do you prefer Spring?: season_explain
+    js show if: |
+      val("season_preferred") === "spring"
+  - Why do you prefer Summer?: season_explain
+    js show if: |
+      val("season_preferred") === "summer"
+  - Why do you prefer Fall?: season_explain
+    js show if: |
+      val("season_preferred") === "fall"
+  - Why do you prefer Winter?: season_explain
+    js show if: |
+      val("season_preferred") === "winter"
 ---
 id: deposit amount returned
 question: How much did your landlord give you back?
@@ -390,11 +405,9 @@ fields:
 id: When did you vacate the property
 progress: 25
 question: |
-  When did you move out of the rental property?
-subquestion: |
-  Enter the date below.
+  Please enter March 12, 2026
 fields:
-  - "Move-out date": vacation_date
+  - "Special date": vacation_date
     datatype: date
 
 ---
@@ -1304,3 +1317,20 @@ subject: |
 content: |
   The documents you'll need to ask the court for a Personal Protection Order are attached.
 ---
+id: Dessert flavors
+question: |
+  Dessert flavors
+fields:
+  - Which flavors of dessert do you like?: flavor_choices
+    datatype: checkboxes
+    label above field: True
+    choices:
+      - chocolate: chocolate
+      - vanilla: vanilla
+        help: |
+          This includes any type of vanilla flavor, such as "French Vanilla" or "Vanilla Bean".
+      - mocha: mocha
+        help: |
+          Mocha means a mix of coffee and chocolate flavors.
+      - berry: berry
+      - mint: mint
