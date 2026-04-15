@@ -18,10 +18,9 @@ metadata:
     - Brett Harrison
 ---
 sections:
-  - section_intro: Introduction
-  - section_tenant: Tenant Information
-  - section_rental: Rental Information
-  - section_landlord: Landlord Information
+  - section_intro: Dessert
+  - section_tenant: Seasons
+  - section_rental: Documents
   - section_done: Get Your Letter
   - review_full: "✎ <u>Review / Edit</u>"
 
@@ -78,15 +77,14 @@ code: |
   user_ask_role = "plaintiff"
 
   intro_what_you_need
-  nav.set_section("section_tenant")
 
   flavor_choices
-  
-  vacation_date
+
+  nav.set_section("section_tenant")
   season_preferred
   
   users.gather()
-
+  nav.set_section("rental")
   if exhibit_attachment.exhibits.has_exhibits:
     exhibit_attachment.exhibits.gather()
 
@@ -956,7 +954,7 @@ content: |
 ---
 template: no_documents
 subject: |
-  What if **don't** have any documents to attach?
+  What if I **don't** have any documents to attach?
 content: |
   Even if you don't have any documents to attach, you can still file your petition. The judge shouldn't deny a petition just because you don't have any documents to attach.
 ---

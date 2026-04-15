@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docassemble.MichiganLetterToLandlordReRet"
-version = "1.0.1"
+version = "1.0.999"
 description = "DIY tool for writing a Letter to Landlord (Security Deposit)"
 readme = "README.md"
 authors = [

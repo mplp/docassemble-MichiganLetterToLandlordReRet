@@ -44,7 +44,7 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.MichiganLetterToLandlordReRet',
-      version='1.0.1',
+      version='1.0.999',
       description=('DIY tool for writing a Letter to Landlord (Security Deposit)'),
       long_description='# docassemble.MichiganLetterToLandlordReRet\r\n\r\nDIY tool for writing a Letter to Landlord (Security Deposit)\r\n\r\n## Author\r\n\r\n## Changelog\r\n* 12/12/25  1.0.1 Update embedded survey; update styling on instructions page\r\n* 9/30/24   Update cover letter; download screen; user survey\r\n* Jan 2024  Incorporate MLH testing feedback. bharrison\r\n* Oct 2023  Various enhancements per initial testing feedback. bharrison\r\n* Aug 2023  Refactor and complete. Brett Harrison\r\n* 2023      Initial dev by Suffolk member Bianca Stella Bruschi\r\n\r\n',
       long_description_content_type='text/markdown',
