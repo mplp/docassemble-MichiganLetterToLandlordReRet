@@ -52,7 +52,7 @@ objects:
   - notification_address: ALAddress
   - other_parties: ALPeopleList.using(ask_number=True,target_number=1)
   - users: ALPeopleList.using(there_are_any=True,ask_number=True,target_number=1, complete_attribute=['name.first'])
-  - exhibit_attachment: ALExhibitDocument.using(title="Exhibits to Landlord Letter", filename="Exhibits to Landlord Letter", include_exhibit_cover_pages=False, add_page_numbers=True, maximum_size=25000000)
+  - exhibit_attachment: ALExhibitDocument.using(title="Exhibits to Letter", filename="Exhibits to Letter", include_exhibit_cover_pages=False, add_page_numbers=True, maximum_size=25000000)
 ---
 features:
   progress bar: True
@@ -785,13 +785,13 @@ content: |
 # ALDocument objects specify the metadata for each template
 objects:
   - instructions: ALDocument.using(title="Instructions", filename="Instructions - Do not file this", enabled=True, has_addendum=False)
-  - letter_to_landlord_security_attachment: ALDocument.using(title="Letter to Landlord - Security Deposit", filename="letter_to_landlord_security", enabled=True, has_addendum=False)
+  - letter_to_landlord_security_attachment: ALDocument.using(title="Letter", filename="Letter", enabled=True, has_addendum=False)
 
 ---
 # Bundles group the ALDocuments into separate downloads, such as for court and for the user
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter_to_landlord_security_attachment, exhibit_attachment], filename="letter_to_landlord_security", title="All forms and instructions", enabled=True)
-  - al_court_bundle: ALDocumentBundle.using(elements=[letter_to_landlord_security_attachment, exhibit_attachment],  filename="letter_to_landlord_security", title="All forms to file", enabled=True)
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter_to_landlord_security_attachment, exhibit_attachment], filename="Letter", title="All forms and instructions", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[letter_to_landlord_security_attachment, exhibit_attachment],  filename="Letter", title="All forms to file", enabled=True)
 
 ---
 # Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same
