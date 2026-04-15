@@ -59,6 +59,7 @@ features:
   progress bar: True
   progress bar multiplier: 0.2
   progress bar method: stepped
+  debug: False
 
 ---
 # # # # # # # # # # # # # # Interview Order # # # # # # # # # # # # # # # #
