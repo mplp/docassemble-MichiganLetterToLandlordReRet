@@ -84,7 +84,7 @@ code: |
   season_preferred
   
   users.gather()
-  nav.set_section("rental")
+  nav.set_section("section_rental")
   if exhibit_attachment.exhibits.has_exhibits:
     exhibit_attachment.exhibits.gather()
 
