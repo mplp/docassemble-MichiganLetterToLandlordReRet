@@ -3,7 +3,6 @@ include:
 ---
 modules:
   - datetime
-
 ---
 # docassemble-level metadata
 # See https://docassemble.org/docs/initial.html
@@ -392,7 +391,7 @@ subquestion: |
   Enter the date below.
 fields:
   - "Move-out date": vacation_date
-    datatype: date
+    datatype: ThreePartsDate
 
 ---
 id: notification date
@@ -404,7 +403,7 @@ subquestion: |
   Enter the date below.
 fields:
   - "Date of Notification": notification_date
-    datatype: date
+    datatype: ThreePartsDate
 
 ---
 id: notification method
@@ -830,3 +829,4 @@ attachment:
   variable name: letter_to_landlord_security_attachment[i]
   docx template file: letter_to_landlord_security.docx
   skip undefined: False
+---
